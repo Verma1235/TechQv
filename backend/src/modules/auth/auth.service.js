@@ -35,7 +35,7 @@ export const loginService = async (email, password, rememberme) => {
     }
 
     if (isMatch) {
-        const token = await authRepo.generateToken(data?.user_id, email, data?.user_role, rememberme);
+        const token = await authRepo.generateToken(data?.user_id, email, data?.user_role, data?.user_name, rememberme);
         return {
             success: true,
             message: "Login successfully",
