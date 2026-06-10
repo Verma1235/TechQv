@@ -1,11 +1,12 @@
 import db from "../../config/mysql.js";
 import jwt from "jsonwebtoken";
 // inser user 
-export const createUser = (name, email, hashPass) => {
+const sql = db.promise();
+export const createUser = (name, email, passwordHash, emailVerified = false) => {
     const sql =
-        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)";
+        "INSERT INTO users (name, email, password_hash,email_verified) VALUES (?, ?, ?, ?)";
     return new Promise((resolve, reject) => {
-        db.query(sql, [name, email, hashPass], (err, result) => {
+        db.query(sql, [name, email, passwordHash, emailVerified], (err, result) => {
             if (err) return reject(err);
             resolve(result);
         });
@@ -39,7 +40,17 @@ export const createSetting = (user_id) => {
 
 //  get user data
 export const getUserData = (email) => {
-    const sql = "SELECT u.id as user_id,u.name as user_name, u.password_hash as hashPassword , r.name as user_role FROM `users` u INNER JOIN `user_roles` ur ON  ur.user_id =u.id INNER JOIN `roles` r ON ur.role_id =r.id WHERE email = ? ";
+    const sql = `
+    SELECT
+        u.id as user_id,
+        u.name as user_name,
+        u.password_hash as hashPassword ,
+        r.name as user_role 
+    FROM users u 
+    INNER JOIN user_roles ur 
+       ON  ur.user_id =u.id
+    INNER JOIN roles r ON ur.role_id =r.id 
+       WHERE email = ? `;
     return new Promise((resolve, reject) => {
         db.query(sql, [email], (err, result) => {
             if (err) return reject(err);
@@ -48,6 +59,33 @@ export const getUserData = (email) => {
         })
     });
 }
+
+// alternate 
+
+export const getUserAuthData = async (
+    userId
+) => {
+
+    const [rows] = await sql.query(
+        `
+        SELECT
+            u.id   AS user_id,
+            u.name AS user_name,
+            u.email AS user_email,
+            r.name AS user_role
+        FROM users u
+        INNER JOIN user_roles ur
+            ON ur.user_id = u.id
+        INNER JOIN roles r
+            ON r.id = ur.role_id
+        WHERE u.id = ?
+        LIMIT 1
+        `,
+        [userId]
+    );
+
+    return rows[0] || null;
+};
 
 // generate Token with header data 
 
@@ -71,3 +109,20 @@ export const generateToken = (user_id, user_email, user_role, user_name, remembe
     });
 
 }
+
+
+
+export const findUserByEmail = async (email) => {
+
+    const [rows] = await sql.query(
+        `
+        SELECT *
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+        `,
+        [email]
+    );
+
+    return rows[0] || null;
+};
